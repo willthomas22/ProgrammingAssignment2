@@ -17,13 +17,13 @@ Enter server port (default: 9999):
 
 Client Commands:
   Join a message board:
-    JOIN|<username>
+    JOIN|username
 
     Example:
       JOIN|Tom
 
   Post to the message board:
-    POST|<subject>|<body>
+    POST|subject|body
 
     Example:
       POST|Homework|Can someone explain question 3?
@@ -32,7 +32,7 @@ Client Commands:
     USERS
 
   Get a specific message by ID:
-    MESSAGE|<id>
+    MESSAGE|id
 
     Example:
       MESSAGE|3
