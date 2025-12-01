@@ -3,17 +3,29 @@ import threading
 import datetime
 
 clients = []
+client_groups = {}
 messages = []
 client_names = {}
 message_id = 0
+rooms = [1,2,3,4,5]
 
 lock = threading.Lock()
 message_id_lock = threading.Lock()
 
+# Broadcast message to all connected clients
 def broadcast_message(message):
-    for client in clients:  # Broadcast message to all connected clients
+    for client in clients:  
         try:
             client.send(message)
+        except:
+            pass
+
+# This will check if a client is in a that private room and send them the message
+def group_message(message, room):
+    for client in clients:
+        try:
+            if room in client_groups.get(client, []):
+                client.send(message)
         except:
             pass
 
@@ -39,6 +51,7 @@ def handle_client(client_socket):
 
                 with lock:
                     client_names[client_socket] = username  # Register username
+                    client_groups[client_socket] = [] # Making a blank list of groups for client
                     
                 welcome_message = f"SERVER | {username} has joined the chat.\n"
                 broadcast_message(welcome_message.encode()) # Notify all clients
@@ -85,8 +98,39 @@ def handle_client(client_socket):
     
             elif command == "LEAVE": # Command to leave chat
                 break
+            
+            elif command == "GROUPS":
+                client_socket.send(f"GROUPS | {' '.join(map(str, rooms))}\n".encode())
+            
+            elif command == "GROUPJOIN":
+                client_groups[client_socket].append(int(split[1]))
+                client_socket.send(f"{client_names[client_socket]} Has Joined group {split[1]}\n".encode())
+
+            elif command == "GROUPPOST":
+                if int(split[1]) not in client_groups[client_socket]:
+                    client_socket.send("ERROR | You are not in this group.\n".encode())
+                else:
+                    group_id = int(split[1]) # Get group ID and convert it to int
+                    subject = split[2]  # Extract subject and body
+                    body = split[3] # Get body of text
+
+                    with message_id_lock:
+                        message_id += 1 # Increment message ID
+                        msg = {"id": message_id, "sender": client_names[client_socket], "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body}    # Create message dictionary
+                        
+                        with lock:
+                            messages.append(msg)    # Store post
+
+                        group_message(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']}\n".encode(), group_id)   # Broadcast message to all clients
+            
+            elif command == "GROUPUSERS":
+                group_id = int(split[1]) # Get the group ID for the user check
+                with lock:
+                    group_user_list = ",".join([client_names.values() for client in clients if group_id in client_groups.get(client, [])])
+                client_socket.send(f"USERS | {group_user_list}\n".encode())
+
             else:   # Unknown command
-                client_socket.send("ERROR | Unknown command.\n".encode()) 
+                client_socket.send("ERROR | Unknown command.\n".encode())
         
         except Exception as e:  
             print(f"Error: {e}")    

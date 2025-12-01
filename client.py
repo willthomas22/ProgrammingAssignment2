@@ -26,24 +26,44 @@ def main():
     threading.Thread(target=receive_messages, args=(client_socket,), daemon=True).start()
 
     joined = False
-    print("\nCommands:\n1. JOIN|<username> - Join the message board\n2. POST|<subject>|<body> - Send a message\n3. USERS - List users\n4. MESSAGE|<message_id> - Get a specific message\n5. LEAVE - Leave chat")
+    print("\nCommands:\n" \
+    "1. JOIN|<username> - Join the message board\n" \
+    "2. POST|<subject>|<body> - Send a message\n" \
+    "3. USERS - List users\n" \
+    "4. MESSAGE|<message_id> - Get a specific message\n" \
+    "5. GROUPS - List Groups\n"  \
+    "6. GROUPJOIN|<group_id> - Join a private group\n" \
+    "7. GROUPPOST|<group_id>|<subject>|<body> - Post to a private group\n" \
+    "8. GROUPUSERS|<group_id> - List private group users\n" \
+    "9. GROUPLEAVE|<group_id> - Leave a private group\n" \
+    "10. GROUPMESSAGE|<group_id> - List private group messages\n" \
+    "11. LEAVE - Leave chat")
     while True:
         command = input("Enter command: ").strip()
 
+        # This sends the command to have a user join
         if command.upper().startswith("JOIN") and not joined:
             client_socket.send(f"{command}\n".encode())
             joined = True
 
+        if command.upper().startswith("GROUPJOIN") and not joined:
+            print("You Must Join the General Chat First.") 
+            continue
+
+        # This Tells the user that they have already joined
         elif command.upper().startswith("JOIN") and joined:
             print("You have already joined the chat.") 
             continue
             
+        # This handles the user leaving the chat
         elif command.upper() == "LEAVE":
             client_socket.send("LEAVE\n".encode())
             break
 
+        #This sends all other commands to the server
         client_socket.send(f"{command}\n".encode())  # Send command to server
 
+    # Closes the client socket
     client_socket.close()
 
 
