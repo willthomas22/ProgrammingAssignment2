@@ -59,7 +59,6 @@ def handle_client(client_socket):
                 last_messages = [m for m in messages if m["group_id"] == None][-2:] # Send last 2 messages to the new client
                 for msg in last_messages:
                     client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']}\n".encode())
-                continue
 
             elif command == "POST":  # Command to post a message
                 if username is None:    # Ensure user has joined
