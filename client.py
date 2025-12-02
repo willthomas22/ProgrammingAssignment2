@@ -5,7 +5,7 @@ def receive_messages(client_socket):
     while True:
         try:
             data = client_socket.recv(1024).decode()    # Receive data from server
-            if not data:
+            if not data:    # Connection closed
                 print("Disconnected from server.")
                 break
 
@@ -15,17 +15,17 @@ def receive_messages(client_socket):
             break
 
 def main():
-    host = input("Enter server IP (default: localhost): ") or "localhost"
-    port = int(input("Enter server port (default: 9999): ") or 9999)
+    host = input("Enter server IP (default: localhost): ") or "localhost"   # Default to localhost
+    port = int(input("Enter server port (default: 9999): ") or 9999) # Default to 9999
 
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   # Create TCP socket
+    client_socket.connect((host, port)) # Connect to server
 
     print("Connected to chat server.")
 
-    threading.Thread(target=receive_messages, args=(client_socket,), daemon=True).start()
+    threading.Thread(target=receive_messages, args=(client_socket,), daemon=True).start()   # Start thread to receive messages
 
-    joined = False
+    joined = False  # Track if user has joined the chat
     print("\nCommands:\n" \
     "1. JOIN|<username> - Join the message board\n" \
     "2. POST|<subject>|<body> - Send a message\n" \
@@ -38,18 +38,20 @@ def main():
     "9. GROUPLEAVE|<group_id> - Leave a private group\n" \
     "10. GROUPMESSAGE|<group_id>|<message_id> - List private group messages\n" \
     "11. LEAVE - Leave chat")
-    while True:
-        command = input("Enter command: ").strip()
+
+    while True: # Main loop to send commands
+        command = input("Enter command: ").strip() # Get user input
 
         # This sends the command to have a user join
-        if command.upper().startswith("JOIN") and not joined:
-            client_socket.send(f"{command}\n".encode())
-            joined = True
+        if command.upper().startswith("JOIN") and not joined:   
+            client_socket.send(f"{command}\n".encode()) # Send command to server
+            joined = True   
             continue
 
-        elif (command.upper().startswith("GROUPJOIN")
-            or command.upper().startswith("GROUPPOST")
-            or command.upper().startswith("GROUPUSERS")
+            # This tells the user they must join a group first
+        elif (command.upper().startswith("GROUPJOIN")       
+            or command.upper().startswith("GROUPPOST")      
+            or command.upper().startswith("GROUPUSERS") 
             or command.upper().startswith("GROUPLEAVE")
             or command.upper().startswith("GROUPMESSAGE")) and not joined:
             print("You Must Join the General Chat First.") 

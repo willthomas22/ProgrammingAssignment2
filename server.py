@@ -2,15 +2,15 @@ import socket
 import threading    
 import datetime
 
-clients = []
-client_groups = {}
-messages = []
-client_names = {}
-message_id = 0
-rooms = [1,2,3,4,5]
+clients = []    # List of connected clients
+client_groups = {}  # Mapping of clients to their joined groups
+messages = []   # List to store messages
+client_names = {}   # Mapping of clients to usernames
+message_id = 0  # Global message ID counter
+rooms = [1,2,3,4,5]  # Predefined private group IDs
 
-lock = threading.Lock()
-message_id_lock = threading.Lock()
+lock = threading.Lock() # Lock for thread-safe operations
+message_id_lock = threading.Lock()  # Lock for message ID incrementing
 
 # Broadcast message to all connected clients
 def broadcast_message(message):
@@ -29,9 +29,9 @@ def group_message(message, room):
         except:
             pass
 
-def handle_client(client_socket):
+def handle_client(client_socket):   # Handle client connection
     global message_id
-    username = None
+    username = None # Initialize username
 
     while True:
         try:
@@ -100,22 +100,22 @@ def handle_client(client_socket):
             elif command == "LEAVE": # Command to leave chat
                 break
             
-            elif command == "GROUPS":
+            elif command == "GROUPS":   # Command to list available groups
                 client_socket.send(f"GROUPS | {' '.join(map(str, rooms))}\n".encode())
             
-            elif command == "GROUPJOIN":
-                client_groups[client_socket].append(int(split[1]))
-                client_socket.send(f"{client_names[client_socket]} Has Joined group {split[1]}\n".encode())
+            elif command == "GROUPJOIN":    # Command to join a private group
+                client_groups[client_socket].append(int(split[1]))  # Add group to client's list
+                client_socket.send(f"{client_names[client_socket]} Has Joined group {split[1]}\n".encode()) 
 
-            elif command == "GROUPPOST":
-                if int(split[1]) not in client_groups[client_socket]:
+            elif command == "GROUPPOST":    # Command to post in a private group
+                if int(split[1]) not in client_groups[client_socket]:   # Check if client is in the group
                     client_socket.send("ERROR | You are not in this group.\n".encode())
                 else:
                     group_id = int(split[1]) # Get group ID and convert it to int
                     subject = split[2]  # Extract subject and body
                     body = split[3] # Get body of text
 
-                    with message_id_lock:
+                    with message_id_lock:   
                         message_id += 1 # Increment message ID
                         msg = {"id": message_id, "sender": client_names[client_socket], "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body, "group_id": group_id}    # Create message dictionary
                         
@@ -124,32 +124,32 @@ def handle_client(client_socket):
 
                         group_message(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} | {msg['group_id']}\n".encode(), group_id)   # Broadcast message to all clients
             
-            elif command == "GROUPUSERS":
+            elif command == "GROUPUSERS":   # Command to list users in a private group
                 group_id = int(split[1]) # Get the group ID for the user check
                 with lock:
-                    group_user_list = ",".join(
-                        [client_names[client] for client in clients if group_id in client_groups.get(client, [])])
+                    group_user_list = ",".join( 
+                        [client_names[client] for client in clients if group_id in client_groups.get(client, [])])  # List users in the group
                 client_socket.send(f"USERS | {group_user_list}\n".encode())
 
-            elif command == "GROUPLEAVE":
+            elif command == "GROUPLEAVE":   # Command to leave a private group
                 group_id = int(split[1]) # Get the group ID to leave
-                if group_id in client_groups[client_socket]:
-                    client_groups[client_socket].remove(group_id)
+                if group_id in client_groups[client_socket]:    # Check if client is in the group
+                    client_groups[client_socket].remove(group_id)   # Remove group from client's list
                     client_socket.send(f"{client_names[client_socket]} Has Left group {split[1]}\n".encode())
-                else:
+                else:   # Client not in the group
                     client_socket.send("ERROR | You are not in this group.\n".encode())
 
-            elif command == "GROUPMESSAGE":
+            elif command == "GROUPMESSAGE":  # Command to get a specific message from a private group
                 group_id = int(split[1]) # Get the group ID for message listing
                 msg_id = int(split[2])   # Extract message ID
 
-                if not (group_id in client_groups.get(client_socket, [])):
+                if not (group_id in client_groups.get(client_socket, [])):  # Check if client is in the group
                     client_socket.send(f"ERROR | You are not in group {group_id}.\n".encode())
                     
-                elif (group_id in client_groups.get(client_socket, [])):
-                    with lock:
-                        group_msgs = [m for m in messages if m.get("group_id") == group_id and m["id"] == msg_id]
-                    for msg in group_msgs:
+                elif (group_id in client_groups.get(client_socket, [])):    # Client is in the group
+                    with lock:  # Access messages safely
+                        group_msgs = [m for m in messages if m.get("group_id") == group_id and m["id"] == msg_id]   # Find messages by ID in the group
+                    for msg in group_msgs:  # Send each found message to client
                         client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} {msg['group_id']}\n".encode())
 
             else:   # Unknown command
@@ -160,17 +160,17 @@ def handle_client(client_socket):
             break
 
     if username:    # Handle client disconnection
-        with lock:
-            del client_names[client_socket]
+        with lock:  
+            del client_names[client_socket]  # Remove username mapping
 
         leave_message = f"SERVER | {username} has left the chat.\n"
         broadcast_message(leave_message.encode())
 
-    with lock:
+    with lock:  
         if client_socket in clients:
-            clients.remove(client_socket)
+            clients.remove(client_socket)   # Remove client from list
 
-    client_socket.close()
+    client_socket.close()   # Close client socket
 
 
 def main():
@@ -187,10 +187,10 @@ def main():
         client_socket, addr = server.accept()
         print(f"New connection: {addr}")
 
-        with lock:
-            clients.append(client_socket)
+        with lock:  
+            clients.append(client_socket)   # Add client to list
 
-        thread = threading.Thread(target=handle_client, args=(client_socket,))
+        thread = threading.Thread(target=handle_client, args=(client_socket,))  # Start thread to handle client
         thread.start()
     
 
