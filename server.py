@@ -56,9 +56,10 @@ def handle_client(client_socket):
                 welcome_message = f"SERVER | {username} has joined the chat.\n"
                 broadcast_message(welcome_message.encode()) # Notify all clients
 
-                last_messages = messages[-2:] # Send last 2 messages to the new client
+                last_messages = [m for m in messages if m["group_id"] == None][-2:] # Send last 2 messages to the new client
                 for msg in last_messages:
                     client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']}\n".encode())
+                continue
 
             elif command == "POST":  # Command to post a message
                 if username is None:    # Ensure user has joined
@@ -71,7 +72,7 @@ def handle_client(client_socket):
 
                 with message_id_lock:
                     message_id += 1 # Increment message ID
-                    msg = {"id": message_id, "sender": username, "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body, "group_id": group_id}    # Create message dictionary
+                    msg = {"id": message_id, "sender": username, "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body, "group_id": None}    # Create message dictionary
                     
                     with lock:
                         messages.append(msg)    # Store post
@@ -85,7 +86,7 @@ def handle_client(client_socket):
                 
                 msg_id = int(split[1])   # Extract message ID
                 with lock:
-                    msg = next((m for m in messages if m["id"] == msg_id), None)  # Find message by ID
+                    msg = next((m for m in messages if (m["id"] == msg_id and m[group_id] == None)), None)  # Find message by ID
 
                 if msg:
                     client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']}\n".encode()) # Send message to client

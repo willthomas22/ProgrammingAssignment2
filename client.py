@@ -45,6 +45,7 @@ def main():
         if command.upper().startswith("JOIN") and not joined:
             client_socket.send(f"{command}\n".encode())
             joined = True
+            continue
 
         elif (command.upper().startswith("GROUPJOIN")
             or command.upper().startswith("GROUPPOST")
