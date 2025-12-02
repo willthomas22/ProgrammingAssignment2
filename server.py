@@ -142,12 +142,15 @@ def handle_client(client_socket):
             elif command == "GROUPMESSAGE":
                 group_id = int(split[1]) # Get the group ID for message listing
                 msg_id = int(split[2])   # Extract message ID
-                with lock:
-                    group_msg = next((m for m in messages if m.get("group_id") == group_id and m["id"] == msg_id), None) # Find the message
-                if group_msg:
-                    client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} {msg['group_id']}\n".encode())
-                else:
-                    client_socket.send("ERROR | Message not found.\n".encode())
+
+                if not (group_id in client_groups.get(client_socket, [])):
+                    client_socket.send(f"ERROR | You are not in group {group_id}.\n".encode())
+                    
+                elif (group_id in client_groups.get(client_socket, [])):
+                    with lock:
+                        group_msgs = [m for m in messages if m.get("group_id") == group_id and m["id"] == msg_id]
+                    for msg in group_msgs:
+                        client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} {msg['group_id']}\n".encode())
 
             else:   # Unknown command
                 client_socket.send("ERROR | Unknown command.\n".encode())

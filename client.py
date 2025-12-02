@@ -46,7 +46,11 @@ def main():
             client_socket.send(f"{command}\n".encode())
             joined = True
 
-        if command.upper().startswith("GROUPJOIN") and not joined:
+        elif (command.upper().startswith("GROUPJOIN")
+            or command.upper().startswith("GROUPPOST")
+            or command.upper().startswith("GROUPUSERS")
+            or command.upper().startswith("GROUPLEAVE")
+            or command.upper().startswith("GROUPMESSAGE")) and not joined:
             print("You Must Join the General Chat First.") 
             continue
 
