@@ -67,15 +67,16 @@ def handle_client(client_socket):
 
                 subject = split[1]  # Extract subject and body
                 body = split[2]
+                group_id = None # General chat has no group ID
 
                 with message_id_lock:
                     message_id += 1 # Increment message ID
-                    msg = {"id": message_id, "sender": username, "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body}    # Create message dictionary
+                    msg = {"id": message_id, "sender": username, "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body, "group_id": group_id}    # Create message dictionary
                     
                     with lock:
                         messages.append(msg)    # Store post
 
-                    broadcast_message(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']}\n".encode())   # Broadcast message to all clients
+                    broadcast_message(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} | {msg['group_id']}\n".encode())   # Broadcast message to all clients
             
             elif command == "MESSAGE":  # Command to get a specific message
                 if username is None:    # Ensure user has joined
@@ -116,18 +117,37 @@ def handle_client(client_socket):
 
                     with message_id_lock:
                         message_id += 1 # Increment message ID
-                        msg = {"id": message_id, "sender": client_names[client_socket], "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body}    # Create message dictionary
+                        msg = {"id": message_id, "sender": client_names[client_socket], "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "subject": subject, "body": body, "group_id": group_id}    # Create message dictionary
                         
                         with lock:
                             messages.append(msg)    # Store post
 
-                        group_message(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']}\n".encode(), group_id)   # Broadcast message to all clients
+                        group_message(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} | {msg['group_id']}\n".encode(), group_id)   # Broadcast message to all clients
             
             elif command == "GROUPUSERS":
                 group_id = int(split[1]) # Get the group ID for the user check
                 with lock:
-                    group_user_list = ",".join([client_names.values() for client in clients if group_id in client_groups.get(client, [])])
+                    group_user_list = ",".join(
+                        [client_names[client] for client in clients if group_id in client_groups.get(client, [])])
                 client_socket.send(f"USERS | {group_user_list}\n".encode())
+
+            elif command == "GROUPLEAVE":
+                group_id = int(split[1]) # Get the group ID to leave
+                if group_id in client_groups[client_socket]:
+                    client_groups[client_socket].remove(group_id)
+                    client_socket.send(f"{client_names[client_socket]} Has Left group {split[1]}\n".encode())
+                else:
+                    client_socket.send("ERROR | You are not in this group.\n".encode())
+
+            elif command == "GROUPMESSAGE":
+                group_id = int(split[1]) # Get the group ID for message listing
+                msg_id = int(split[2])   # Extract message ID
+                with lock:
+                    group_msg = next((m for m in messages if m.get("group_id") == group_id and m["id"] == msg_id), None) # Find the message
+                if group_msg:
+                    client_socket.send(f"MESSAGE | {msg['id']} | {msg['sender']} | {msg['date']} | {msg['subject']} | {msg['body']} {msg['group_id']}\n".encode())
+                else:
+                    client_socket.send("ERROR | Message not found.\n".encode())
 
             else:   # Unknown command
                 client_socket.send("ERROR | Unknown command.\n".encode())

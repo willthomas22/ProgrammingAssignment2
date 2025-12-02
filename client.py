@@ -36,7 +36,7 @@ def main():
     "7. GROUPPOST|<group_id>|<subject>|<body> - Post to a private group\n" \
     "8. GROUPUSERS|<group_id> - List private group users\n" \
     "9. GROUPLEAVE|<group_id> - Leave a private group\n" \
-    "10. GROUPMESSAGE|<group_id> - List private group messages\n" \
+    "10. GROUPMESSAGE|<group_id>|<message_id> - List private group messages\n" \
     "11. LEAVE - Leave chat")
     while True:
         command = input("Enter command: ").strip()
